@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common'
+import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { InstancesModule } from '../instances/instances.module'
 import { LoggerModule } from '../logger/logger.module'
+import { AuthModule } from '../auth/auth.module'
+import { AuthMiddleware } from '../auth/auth.middleware'
 
 @Module({
   imports: [
@@ -18,9 +20,16 @@ import { LoggerModule } from '../logger/logger.module'
         synchronize: true
       })
     }),
-    InstancesModule
+    InstancesModule,
+    AuthModule
   ],
   controllers: [],
   providers: []
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  public configure (consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(AuthMiddleware)
+      .forRoutes('/')
+  }
+}
