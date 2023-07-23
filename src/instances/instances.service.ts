@@ -23,6 +23,13 @@ export class InstancesService {
     private readonly instanceRepository: Repository<Instance>
   ) {}
 
+  public async listInstances (limit: number, offset: number): Promise<Instance[]> {
+    return await this.instanceRepository.find({
+      take: limit,
+      skip: offset
+    })
+  }
+
   public async createInstance (instance: Instance): Promise<Instance> {
     const isAlreadyExist = await this.instanceRepository.findOneBy({
       name: instance.name
