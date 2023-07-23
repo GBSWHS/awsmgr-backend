@@ -1,4 +1,4 @@
-import { CreateKeyPairCommand, DescribeImagesCommand, DescribeSubnetsCommand, EC2Client, type Instance as EC2Instance, type Image, RunInstancesCommand, type Subnet, type KeyPair, CreateSecurityGroupCommand, AuthorizeSecurityGroupIngressCommand, AllocateAddressCommand, AssociateAddressCommand, DescribeInstanceStatusCommand } from '@aws-sdk/client-ec2'
+import { CreateKeyPairCommand, DescribeImagesCommand, DescribeSubnetsCommand, EC2Client, type Instance as EC2Instance, type Image, RunInstancesCommand, type Subnet, type KeyPair, CreateSecurityGroupCommand, AuthorizeSecurityGroupIngressCommand, AllocateAddressCommand, AssociateAddressCommand, DescribeInstanceStatusCommand, DescribeSecurityGroupsCommand, RevokeSecurityGroupIngressCommand, DescribeInstancesCommand, StopInstancesCommand, ModifyVolumeCommand, StartInstancesCommand, ModifyInstanceAttributeCommand } from '@aws-sdk/client-ec2'
 import { GetProductsCommand, Pricing } from '@aws-sdk/client-pricing'
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { Instance } from './entity/instance.entity'
@@ -9,6 +9,7 @@ import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { cwd } from 'node:process'
 import { delayInSeconds } from '../utils'
+import { type UpdateInstanceDto } from './dto/UpdateInstance.dto'
 
 @Injectable()
 export class InstancesService {
@@ -89,7 +90,7 @@ export class InstancesService {
       })
     }
 
-    await this.waitForRunningState(ec2Instance)
+    await this.waitForState('running', ec2Instance)
 
     const publicIP = await this.attachEIP(ec2Instance)
     if (publicIP === undefined) {
@@ -107,6 +108,81 @@ export class InstancesService {
 
     await this.instanceRepository.insert(result)
     return result
+  }
+
+  public async updateInstance (uuid: string, updateDto: UpdateInstanceDto): Promise<Instance> {
+    const instance = await this.instanceRepository.findOneBy({
+      uuid
+    })
+
+    if (instance === null) {
+      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+    }
+
+    if (updateDto.name !== undefined) {
+      throw new BadRequestException('Instance name cannot be changed.')
+    }
+
+    if (updateDto.ports !== undefined) {
+      const ports = updateDto.ports.split(',').map((v) => Math.abs(parseInt(v))).filter((v) => !isNaN(v))
+      await this.updateSecurityGroup(instance.name ?? '', ports)
+    }
+
+    let pricePerHour: number | undefined
+    if (updateDto.storageSize !== undefined || updateDto.type !== undefined) {
+      const ec2Instance = await this.getEC2Instance(instance.name)
+      if (ec2Instance === undefined) {
+        throw new InternalServerErrorException('Internal error has been occurred during stop instance.')
+      }
+
+      await this.stopEC2Instance(ec2Instance)
+      await this.waitForState('stopped', ec2Instance)
+
+      if (updateDto.storageSize !== undefined) {
+        await this.updateRootStorage(updateDto.storageSize, ec2Instance)
+      }
+
+      if (updateDto.type !== undefined) {
+        pricePerHour = await this.getTypePricePerHour(updateDto.type)
+        await this.updateInstanceType(updateDto.type, ec2Instance)
+      }
+
+      await this.startEC2Instance(ec2Instance)
+      await this.waitForState('running', ec2Instance)
+    }
+
+    const updateOption = {
+      ...updateDto,
+      pricePerHour
+    }
+
+    if (pricePerHour === undefined) {
+      delete updateOption.pricePerHour
+    }
+
+    delete updateOption.uuid
+    delete updateOption.keypairId
+    delete updateOption.publicIP
+
+    await this.instanceRepository.update({ uuid }, updateOption)
+
+    return {
+      ...instance,
+      ...updateOption
+    } as any
+  }
+
+  private async getEC2Instance (name: string): Promise<EC2Instance | undefined> {
+    const command = new DescribeInstancesCommand({
+      MaxResults: 5,
+      Filters: [{
+        Name: 'tag:Name',
+        Values: [name]
+      }]
+    })
+
+    const response = await this.ec2Client.send(command)
+    return response.Reservations?.[0]?.Instances?.[0]
   }
 
   private async createEC2Instance (
@@ -152,6 +228,22 @@ export class InstancesService {
     return result.Instances?.[0]
   }
 
+  private async stopEC2Instance (ec2Instance: EC2Instance): Promise<void> {
+    const command = new StopInstancesCommand({
+      InstanceIds: [ec2Instance.InstanceId ?? '']
+    })
+
+    await this.ec2Client.send(command)
+  }
+
+  private async startEC2Instance (ec2Instance: EC2Instance): Promise<void> {
+    const command = new StartInstancesCommand({
+      InstanceIds: [ec2Instance.InstanceId ?? '']
+    })
+
+    await this.ec2Client.send(command)
+  }
+
   private async createKeypair (keyName: string): Promise<KeyPair | undefined> {
     const command = new CreateKeyPairCommand({
       KeyName: keyName,
@@ -188,6 +280,17 @@ export class InstancesService {
     return priceDimension.pricePerUnit.USD
   }
 
+  private async updateInstanceType (instanceType: string, ec2Instance: EC2Instance): Promise<void> {
+    const command = new ModifyInstanceAttributeCommand({
+      InstanceType: {
+        Value: instanceType
+      },
+      InstanceId: ec2Instance.InstanceId
+    })
+
+    await this.ec2Client.send(command)
+  }
+
   private async getLatestUbuntuImage (): Promise<Image | undefined> {
     const command = new DescribeImagesCommand({
       Owners: ['099720109477'],
@@ -220,7 +323,14 @@ export class InstancesService {
     const sgCommand = new CreateSecurityGroupCommand({
       GroupName: name + '-sg',
       Description: 'this security group managed by awsmgr',
-      VpcId: vpcId
+      VpcId: vpcId,
+      TagSpecifications: [{
+        ResourceType: 'security-group',
+        Tags: [{
+          Key: 'Name',
+          Value: name
+        }]
+      }]
     })
 
     const sgResponse = await this.ec2Client.send(sgCommand)
@@ -249,6 +359,63 @@ export class InstancesService {
     return groupId
   }
 
+  private async updateSecurityGroup (name: string, afterPorts: number[]): Promise<void> {
+    const sgCommand = new DescribeSecurityGroupsCommand({
+      Filters: [{
+        Name: 'tag:Name',
+        Values: [name]
+      }],
+      MaxResults: 5
+    })
+
+    const sgResponse = await this.ec2Client.send(sgCommand)
+
+    const groupId = sgResponse.SecurityGroups?.[0].GroupId ?? ''
+    const beforeRules = sgResponse.SecurityGroups?.[0].IpPermissions ?? []
+    const beforePorts = beforeRules.map((v) => v.FromPort ?? 0)
+
+    const ports = [
+      ...beforePorts,
+      ...afterPorts
+    ]
+
+    for (const port of ports) {
+      // Creation
+      if (!beforePorts.includes(port) && afterPorts.includes(port)) {
+        const createCommand = new AuthorizeSecurityGroupIngressCommand({
+          GroupId: groupId,
+          IpPermissions: [{
+            FromPort: port,
+            ToPort: port,
+            IpProtocol: 'tcp',
+            IpRanges: [{
+              CidrIp: '0.0.0.0/0'
+            }]
+          }]
+        })
+
+        await this.ec2Client.send(createCommand)
+      }
+
+      // Deletion
+      if (beforePorts.includes(port) && !afterPorts.includes(port)) {
+        const deleteCommand = new RevokeSecurityGroupIngressCommand({
+          GroupId: groupId,
+          IpPermissions: [{
+            FromPort: port,
+            ToPort: port,
+            IpProtocol: 'tcp',
+            IpRanges: [{
+              CidrIp: '0.0.0.0/0'
+            }]
+          }]
+        })
+
+        await this.ec2Client.send(deleteCommand)
+      }
+    }
+  }
+
   private async attachEIP (ec2Instance: EC2Instance): Promise<string | undefined> {
     const createCommand = new AllocateAddressCommand({
       Domain: 'vpc'
@@ -268,6 +435,16 @@ export class InstancesService {
     return response.PublicIp
   }
 
+  private async updateRootStorage (size: number, ec2Instance: EC2Instance): Promise<void> {
+    const volumeId = ec2Instance.BlockDeviceMappings?.[0].Ebs?.VolumeId
+    const command = new ModifyVolumeCommand({
+      VolumeId: volumeId,
+      Size: size
+    })
+
+    await this.ec2Client.send(command)
+  }
+
   private async saveKeypair (keypair: KeyPair): Promise<string> {
     const keypairId = randomUUID()
     const keypairPath = path.join(cwd(), 'keys', keypairId + '.ppk')
@@ -277,18 +454,18 @@ export class InstancesService {
     return keypairId
   }
 
-  private async waitForRunningState (instance: EC2Instance): Promise<void> {
+  private async waitForState (state: string, instance: EC2Instance): Promise<void> {
     for (;;) {
       await delayInSeconds(500)
 
-      const command = new DescribeInstanceStatusCommand({
+      const command = new DescribeInstancesCommand({
         InstanceIds: [
           instance.InstanceId ?? ''
         ]
       })
 
       const response = await this.ec2Client.send(command)
-      if (response.InstanceStatuses?.[0]?.InstanceState?.Name === 'running') {
+      if (response.Reservations?.[0]?.Instances?.[0].State?.Name === state) {
         break
       }
     }
