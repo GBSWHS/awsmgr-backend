@@ -23,10 +23,10 @@ export class InstancesService {
     private readonly instanceRepository: Repository<Instance>
   ) {}
 
-  public async listInstances (limit: number, offset: number): Promise<Instance[]> {
+  public async listInstances (take: number, skip: number): Promise<Instance[]> {
     return await this.instanceRepository.find({
-      take: limit,
-      skip: offset
+      take,
+      skip
     })
   }
 

@@ -10,8 +10,8 @@ export class InstancesController {
   ) {}
 
   @Get('/')
-  public async listInstances (@Query('limit') limit: number, @Query('offset') offset: number): PResBody<Instance[]> {
-    const result = await this.instancesService.listInstances(limit, offset)
+  public async listInstances (@Query('take') take: number, @Query('skip') skip: number): PResBody<Instance[]> {
+    const result = await this.instancesService.listInstances(take, skip)
 
     return {
       success: true,

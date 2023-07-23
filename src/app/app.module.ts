@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { InstancesModule } from './instances/instances.module'
+import { InstancesModule } from '../instances/instances.module'
+import { LoggerModule } from '../logger/logger.module'
 
 @Module({
   imports: [
+    LoggerModule,
     ConfigModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
