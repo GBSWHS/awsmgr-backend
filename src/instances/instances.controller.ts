@@ -55,8 +55,19 @@ export class InstancesController {
   }
 
   @Post('/:uuid/restart')
+  @UseGuards(AuthGuard)
   public async restartInstance (@Param('uuid') uuid: string): PResBody {
     await this.instancesService.restartInstance(uuid)
+
+    return {
+      success: true
+    }
+  }
+
+  @Post('/:uuid/reset')
+  @UseGuards(AuthGuard)
+  public async resetInstance (@Param('uuid') uuid: string): PResBody {
+    await this.instancesService.resetInstance(uuid)
 
     return {
       success: true

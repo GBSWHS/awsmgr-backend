@@ -25,7 +25,8 @@ import {
   DisassociateAddressCommand,
   DescribeAddressesCommand,
   ReleaseAddressCommand,
-  RebootInstancesCommand
+  RebootInstancesCommand,
+  CreateReplaceRootVolumeTaskCommand
 } from '@aws-sdk/client-ec2'
 import { GetProductsCommand, Pricing } from '@aws-sdk/client-pricing'
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
@@ -238,11 +239,33 @@ export class InstancesService {
 
     const ec2Instance = await this.getEC2Instance(instance.name)
     if (ec2Instance === undefined) {
-      throw new InternalServerErrorException('Internal error has been occurred during delete instance.')
+      throw new InternalServerErrorException('Internal error has been occurred during restart instance.')
     }
 
     const command = new RebootInstancesCommand({
       InstanceIds: [ec2Instance.InstanceId ?? '']
+    })
+
+    await this.ec2Client.send(command)
+  }
+
+  public async resetInstance (uuid: string): Promise<void> {
+    const instance = await this.instanceRepository.findOneBy({
+      uuid
+    })
+
+    if (instance === null) {
+      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+    }
+
+    const ec2Instance = await this.getEC2Instance(instance.name)
+    if (ec2Instance === undefined) {
+      throw new InternalServerErrorException('Internal error has been occurred during reset instance.')
+    }
+
+    const command = new CreateReplaceRootVolumeTaskCommand({
+      InstanceId: ec2Instance.InstanceId ?? '',
+      DeleteReplacedRootVolume: true
     })
 
     await this.ec2Client.send(command)
