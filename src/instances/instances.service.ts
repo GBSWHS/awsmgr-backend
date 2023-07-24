@@ -24,7 +24,8 @@ import {
   DeleteSecurityGroupCommand,
   DisassociateAddressCommand,
   DescribeAddressesCommand,
-  ReleaseAddressCommand
+  ReleaseAddressCommand,
+  RebootInstancesCommand
 } from '@aws-sdk/client-ec2'
 import { GetProductsCommand, Pricing } from '@aws-sdk/client-pricing'
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
@@ -224,6 +225,27 @@ export class InstancesService {
     await this.instanceRepository.delete({
       uuid
     })
+  }
+
+  public async restartInstance (uuid: string): Promise<void> {
+    const instance = await this.instanceRepository.findOneBy({
+      uuid
+    })
+
+    if (instance === null) {
+      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+    }
+
+    const ec2Instance = await this.getEC2Instance(instance.name)
+    if (ec2Instance === undefined) {
+      throw new InternalServerErrorException('Internal error has been occurred during delete instance.')
+    }
+
+    const command = new RebootInstancesCommand({
+      InstanceIds: [ec2Instance.InstanceId ?? '']
+    })
+
+    await this.ec2Client.send(command)
   }
 
   private async getEC2Instance (name: string): Promise<EC2Instance | undefined> {

@@ -53,4 +53,13 @@ export class InstancesController {
       success: true
     }
   }
+
+  @Post('/:uuid/restart')
+  public async restartInstance (@Param('uuid') uuid: string): PResBody {
+    await this.instancesService.restartInstance(uuid)
+
+    return {
+      success: true
+    }
+  }
 }
