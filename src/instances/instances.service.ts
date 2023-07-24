@@ -1,4 +1,31 @@
-import { CreateKeyPairCommand, DescribeImagesCommand, DescribeSubnetsCommand, EC2Client, type Instance as EC2Instance, type Image, RunInstancesCommand, type Subnet, type KeyPair, CreateSecurityGroupCommand, AuthorizeSecurityGroupIngressCommand, AllocateAddressCommand, AssociateAddressCommand, DescribeInstanceStatusCommand, DescribeSecurityGroupsCommand, RevokeSecurityGroupIngressCommand, DescribeInstancesCommand, StopInstancesCommand, ModifyVolumeCommand, StartInstancesCommand, ModifyInstanceAttributeCommand } from '@aws-sdk/client-ec2'
+import {
+  EC2Client,
+  type KeyPair,
+  type Subnet,
+  type Image,
+  type Instance as EC2Instance,
+  RunInstancesCommand,
+  ModifyVolumeCommand,
+  CreateKeyPairCommand,
+  StopInstancesCommand,
+  StartInstancesCommand,
+  DescribeImagesCommand,
+  AllocateAddressCommand,
+  DescribeSubnetsCommand,
+  AssociateAddressCommand,
+  DescribeInstancesCommand,
+  CreateSecurityGroupCommand,
+  DescribeSecurityGroupsCommand,
+  ModifyInstanceAttributeCommand,
+  RevokeSecurityGroupIngressCommand,
+  AuthorizeSecurityGroupIngressCommand,
+  TerminateInstancesCommand,
+  DeleteKeyPairCommand,
+  DeleteSecurityGroupCommand,
+  DisassociateAddressCommand,
+  DescribeAddressesCommand,
+  ReleaseAddressCommand
+} from '@aws-sdk/client-ec2'
 import { GetProductsCommand, Pricing } from '@aws-sdk/client-pricing'
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { Instance } from './entity/instance.entity'
@@ -172,13 +199,46 @@ export class InstancesService {
     } as any
   }
 
+  public async deleteInstance (uuid: string): Promise<void> {
+    const instance = await this.instanceRepository.findOneBy({
+      uuid
+    })
+
+    if (instance === null) {
+      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+    }
+
+    const ec2Instance = await this.getEC2Instance(instance.name)
+    if (ec2Instance === undefined) {
+      throw new InternalServerErrorException('Internal error has been occurred during delete instance.')
+    }
+
+    await this.detachEIP(ec2Instance)
+    await this.deleteKeypair(instance.name)
+
+    await this.deleteEC2Instance(ec2Instance)
+    await this.waitForState('terminated', ec2Instance)
+
+    await this.deleteSecurityGroup(instance.name)
+
+    await this.instanceRepository.delete({
+      uuid
+    })
+  }
+
   private async getEC2Instance (name: string): Promise<EC2Instance | undefined> {
     const command = new DescribeInstancesCommand({
       MaxResults: 5,
-      Filters: [{
-        Name: 'tag:Name',
-        Values: [name]
-      }]
+      Filters: [
+        {
+          Name: 'tag:Name',
+          Values: [name]
+        },
+        {
+          Name: 'instance-state-name',
+          Values: ['running']
+        }
+      ]
     })
 
     const response = await this.ec2Client.send(command)
@@ -244,6 +304,16 @@ export class InstancesService {
     await this.ec2Client.send(command)
   }
 
+  private async deleteEC2Instance (ec2Instance: EC2Instance): Promise<void> {
+    const command = new TerminateInstancesCommand({
+      InstanceIds: [
+        ec2Instance.InstanceId ?? ''
+      ]
+    })
+
+    await this.ec2Client.send(command)
+  }
+
   private async createKeypair (keyName: string): Promise<KeyPair | undefined> {
     const command = new CreateKeyPairCommand({
       KeyName: keyName,
@@ -252,6 +322,14 @@ export class InstancesService {
     })
 
     return await this.ec2Client.send(command)
+  }
+
+  private async deleteKeypair (keyName: string): Promise<void> {
+    const command = new DeleteKeyPairCommand({
+      KeyName: keyName
+    })
+
+    await this.ec2Client.send(command)
   }
 
   private async getTypePricePerHour (instanceType: string): Promise<number | undefined> {
@@ -416,6 +494,25 @@ export class InstancesService {
     }
   }
 
+  private async deleteSecurityGroup (name: string): Promise<void> {
+    const sgCommand = new DescribeSecurityGroupsCommand({
+      Filters: [{
+        Name: 'tag:Name',
+        Values: [name]
+      }],
+      MaxResults: 5
+    })
+
+    const sgResponse = await this.ec2Client.send(sgCommand)
+    const groupId = sgResponse.SecurityGroups?.[0].GroupId ?? ''
+
+    const deleteCommand = new DeleteSecurityGroupCommand({
+      GroupId: groupId
+    })
+
+    await this.ec2Client.send(deleteCommand)
+  }
+
   private async attachEIP (ec2Instance: EC2Instance): Promise<string | undefined> {
     const createCommand = new AllocateAddressCommand({
       Domain: 'vpc'
@@ -433,6 +530,26 @@ export class InstancesService {
 
     await this.ec2Client.send(attachCommand)
     return response.PublicIp
+  }
+
+  private async detachEIP (ec2Instance: EC2Instance): Promise<void> {
+    const eipCommand = new DescribeAddressesCommand({
+      Filters: [{
+        Name: 'instance-id',
+        Values: [ec2Instance.InstanceId ?? '']
+      }]
+    })
+    const eip = await this.ec2Client.send(eipCommand)
+
+    const detachCommand = new DisassociateAddressCommand({
+      AssociationId: eip.Addresses?.[0].AssociationId
+    })
+    await this.ec2Client.send(detachCommand)
+
+    const releaseCommand = new ReleaseAddressCommand({
+      AllocationId: eip.Addresses?.[0].AllocationId
+    })
+    await this.ec2Client.send(releaseCommand)
   }
 
   private async updateRootStorage (size: number, ec2Instance: EC2Instance): Promise<void> {

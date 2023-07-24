@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common'
 import { PResBody } from '../types'
 import { InstancesService } from './instances.service'
 import { Instance } from './entity/instance.entity'
@@ -41,6 +41,16 @@ export class InstancesController {
     return {
       success: true,
       body: result
+    }
+  }
+
+  @Delete('/:uuid')
+  @UseGuards(AuthGuard)
+  public async deleteInstance (@Param('uuid') uuid: string): PResBody {
+    await this.instancesService.deleteInstance(uuid)
+
+    return {
+      success: true
     }
   }
 }
