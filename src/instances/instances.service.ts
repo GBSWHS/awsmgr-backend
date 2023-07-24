@@ -34,7 +34,7 @@ import { Instance } from './entity/instance.entity'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { randomUUID } from 'node:crypto'
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { cwd } from 'node:process'
 import { delayInSeconds } from '../utils'
@@ -269,6 +269,18 @@ export class InstancesService {
     })
 
     await this.ec2Client.send(command)
+  }
+
+  public async getInstanceKeypair (uuid: string): Promise<string> {
+    const instance = await this.instanceRepository.findOneBy({
+      uuid
+    })
+
+    if (instance === null) {
+      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+    }
+
+    return await this.loadKeypair(instance.keypairId)
   }
 
   private async getEC2Instance (name: string): Promise<EC2Instance | undefined> {
@@ -614,6 +626,11 @@ export class InstancesService {
     await writeFile(keypairPath, keypair.KeyMaterial ?? '')
 
     return keypairId
+  }
+
+  private async loadKeypair (keypairId: string): Promise<string> {
+    const keypairPath = path.join(cwd(), 'keys', keypairId + '.ppk')
+    return (await readFile(keypairPath)).toString('utf-8')
   }
 
   private async waitForState (state: string, instance: EC2Instance): Promise<void> {

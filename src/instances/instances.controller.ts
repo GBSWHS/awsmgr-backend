@@ -73,4 +73,15 @@ export class InstancesController {
       success: true
     }
   }
+
+  @Get('/:uuid/keypair')
+  @UseGuards(AuthGuard)
+  public async getInstanceKeypair (@Param('uuid') uuid: string): PResBody<string> {
+    const keypair = await this.instancesService.getInstanceKeypair(uuid)
+
+    return {
+      success: true,
+      body: keypair
+    }
+  }
 }
