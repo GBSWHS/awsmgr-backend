@@ -27,4 +27,4 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ghcr.io/GBSWHS/awsmgr-backend:latest
+          tags: ghcr.io/gbswhs/awsmgr-backend:latest
