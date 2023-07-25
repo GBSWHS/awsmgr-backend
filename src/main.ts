@@ -57,7 +57,9 @@ async function bootstrap (): Promise<void> {
   SwaggerModule.setup('/', app, document)
 
   const config = app.get(ConfigService)
-  const port = config.get<number>('SERVER_PORT') ?? 3000
+  const port =
+    config.get<number>('SERVER_PORT') ??
+    process.env.SERVER_PORT ?? 3000
 
   await app.listen(port)
 }
