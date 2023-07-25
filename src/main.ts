@@ -11,10 +11,9 @@ import { Logger } from './logger/logger.service'
 
 async function bootstrap (): Promise<void> {
   const app = await NestFactory.create(AppModule, {
-    bufferLogs: true
+    logger: new Logger()
   })
 
-  app.useLogger(app.get(Logger))
   app.useGlobalFilters(new HttpExceptionFilter())
   app.setGlobalPrefix('/api')
   app.useGlobalPipes(new ValidationPipe({

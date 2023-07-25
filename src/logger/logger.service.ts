@@ -2,7 +2,6 @@ import { type LoggerService } from '@nestjs/common'
 
 export class Logger implements LoggerService {
   public log (message: any, ...optionalParams: any[]): void {
-    if (process.env.DEBUG === undefined) return
     console.log(JSON.stringify({
       type: 'NESTJS_LOG',
       message,
@@ -30,7 +29,6 @@ export class Logger implements LoggerService {
   }
 
   public debug? (message: any, ...optionalParams: any[]): void {
-    if (process.env.DEBUG === undefined) return
     console.log(JSON.stringify({
       type: 'NESTJS_DEBUG_LOG',
       message,
@@ -40,18 +38,8 @@ export class Logger implements LoggerService {
   }
 
   public verbose? (message: any, ...optionalParams: any[]): void {
-    if (process.env.DEBUG === undefined) return
     console.log(JSON.stringify({
       type: 'NESTJS_VERBOSE_LOG',
-      message,
-      extra: optionalParams,
-      date: new Date()
-    }))
-  }
-
-  app (message: any, ...optionalParams: any[]): void {
-    console.log(JSON.stringify({
-      type: 'APP_LOG',
       message,
       extra: optionalParams,
       date: new Date()
