@@ -4,7 +4,9 @@ import { ResBody } from '../types'
 import { AuthService } from './auth.service'
 import { GetLoginTokenDto } from './dto/GetLoginToken.dto'
 import { Response } from 'express'
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 
+@ApiTags('auth')
 @Controller('/auth')
 export class AuthController {
   constructor (
@@ -13,6 +15,7 @@ export class AuthController {
 
   @Get('/status')
   @UseGuards(AuthGuard)
+  @ApiCookieAuth()
   public getLoginStatus (): ResBody {
     return {
       success: true

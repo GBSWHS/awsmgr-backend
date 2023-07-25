@@ -4,7 +4,10 @@ import { InstancesService } from './instances.service'
 import { Instance } from './entity/instance.entity'
 import { AuthGuard } from '../auth/auth.guard'
 import { UpdateInstanceDto } from './dto/UpdateInstance.dto'
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 
+@ApiTags('instances')
+@ApiCookieAuth()
 @Controller('/instances')
 export class InstancesController {
   constructor (

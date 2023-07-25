@@ -4,7 +4,9 @@ import { PResBody } from '../types'
 import { Invite } from './entity/invite.entity'
 import { AuthGuard } from '../auth/auth.guard'
 import { type Instance } from '../instances/entity/instance.entity'
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 
+@ApiTags('invites')
 @Controller('/invites')
 export class InvitesController {
   constructor (
@@ -22,6 +24,7 @@ export class InvitesController {
   }
 
   @Post('/')
+  @ApiCookieAuth()
   @UseGuards(AuthGuard)
   public async createInvite (@Body() invite: Invite): PResBody<Invite> {
     const result = await this.invitesService.createInvite(invite)

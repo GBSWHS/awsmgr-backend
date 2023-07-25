@@ -6,6 +6,7 @@ import { HttpExceptionFilter } from './app/exception.filter'
 import cookieParser from 'cookie-parser'
 import morgan from 'morgan'
 import { type Response } from 'express'
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { Logger } from './logger/logger.service'
 
 async function bootstrap (): Promise<void> {
@@ -41,6 +42,19 @@ async function bootstrap (): Promise<void> {
       date: tokens.date(req, res, 'iso'),
       locals: (res as Response).locals
     })))
+
+  const docs = new DocumentBuilder()
+    .setTitle('awsmgr')
+    .setDescription('AWS EC2, over-simplified. | 경소고 EC2 대시보드 & 연결 정보 솔루션')
+    .setVersion('0.0')
+    .addTag('auth', '관리자 인증 관련')
+    .addTag('instances', '관리자 인스턴스 관리')
+    .addTag('invites', '사용자 인스턴스 사용')
+    .addCookieAuth('SESSION_TOKEN')
+    .build()
+
+  const document = SwaggerModule.createDocument(app, docs)
+  SwaggerModule.setup('/', app, document)
 
   const config = app.get(ConfigService)
   const port = config.get<number>('SERVER_PORT') ?? 3000
