@@ -54,7 +54,7 @@ async function bootstrap (): Promise<void> {
     .build()
 
   const document = SwaggerModule.createDocument(app, docs)
-  SwaggerModule.setup('/', app, document)
+  SwaggerModule.setup('/api', app, document)
 
   const config = app.get(ConfigService)
   const port =
