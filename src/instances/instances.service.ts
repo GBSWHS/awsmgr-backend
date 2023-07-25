@@ -497,8 +497,8 @@ export class InstancesService {
   private async updateSecurityGroup (name: string, afterPorts: number[]): Promise<void> {
     const sgCommand = new DescribeSecurityGroupsCommand({
       Filters: [{
-        Name: 'tag:Name',
-        Values: [name]
+        Name: 'group-name',
+        Values: [name + '-sg']
       }],
       MaxResults: 5
     })
@@ -554,16 +554,14 @@ export class InstancesService {
   private async deleteSecurityGroup (name: string): Promise<void> {
     const sgCommand = new DescribeSecurityGroupsCommand({
       Filters: [{
-        Name: 'tag:Name',
-        Values: [name]
+        Name: 'group-name',
+        Values: [name + '-sg']
       }],
       MaxResults: 5
     })
 
     const sgResponse = await this.ec2Client.send(sgCommand)
     const groupId = sgResponse.SecurityGroups?.[0]?.GroupId ?? ''
-
-    console.log(name, sgResponse)
 
     const deleteCommand = new DeleteSecurityGroupCommand({
       GroupId: groupId
