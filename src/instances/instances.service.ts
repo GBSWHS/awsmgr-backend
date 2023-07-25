@@ -439,8 +439,8 @@ export class InstancesService {
 
     return response
       .sort((a, b) =>
-        new Date(a.CreationDate ?? '').getTime() -
-        new Date(b.CreationDate ?? '').getTime())[0]
+        new Date(b.CreationDate ?? '').getTime() -
+        new Date(a.CreationDate ?? '').getTime())[0]
   }
 
   private async getSubnet (): Promise<Subnet | undefined> {
@@ -561,7 +561,9 @@ export class InstancesService {
     })
 
     const sgResponse = await this.ec2Client.send(sgCommand)
-    const groupId = sgResponse.SecurityGroups?.[0].GroupId ?? ''
+    const groupId = sgResponse.SecurityGroups?.[0]?.GroupId ?? ''
+
+    console.log(name, sgResponse)
 
     const deleteCommand = new DeleteSecurityGroupCommand({
       GroupId: groupId
