@@ -285,7 +285,6 @@ export class InstancesService {
 
   private async getEC2Instance (name: string): Promise<EC2Instance | undefined> {
     const command = new DescribeInstancesCommand({
-      MaxResults: 5,
       Filters: [
         {
           Name: 'tag:Name',
@@ -399,8 +398,7 @@ export class InstancesService {
         { Type: 'TERM_MATCH', Field: 'preInstalledSw', Value: 'NA' },
         { Type: 'TERM_MATCH', Field: 'regionCode', Value: 'ap-northeast-2' },
         { Type: 'TERM_MATCH', Field: 'capacitystatus', Value: 'Used' }
-      ],
-      MaxResults: 1
+      ]
     })
 
     const response = await this.pricingClient.send(command)
@@ -499,8 +497,7 @@ export class InstancesService {
       Filters: [{
         Name: 'group-name',
         Values: [name + '-sg']
-      }],
-      MaxResults: 5
+      }]
     })
 
     const sgResponse = await this.ec2Client.send(sgCommand)
@@ -556,8 +553,7 @@ export class InstancesService {
       Filters: [{
         Name: 'group-name',
         Values: [name + '-sg']
-      }],
-      MaxResults: 5
+      }]
     })
 
     const sgResponse = await this.ec2Client.send(sgCommand)
