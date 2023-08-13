@@ -16,12 +16,16 @@ export class InstancesController {
 
   @Get('/')
   @UseGuards(AuthGuard)
-  public async listInstances (@Query('take') take: number, @Query('skip') skip: number): PResBody<Instance[]> {
-    const result = await this.instancesService.listInstances(take, skip)
+  public async listInstances (@Query('take') take: number, @Query('skip') skip: number): PResBody<{ instances: Instance[], pageCount: number }> {
+    const instances = await this.instancesService.listInstances(take, skip)
+    const pageCount = await this.instancesService.countInstancePages(take)
 
     return {
       success: true,
-      body: result
+      body: {
+        instances,
+        pageCount
+      }
     }
   }
 
@@ -33,6 +37,19 @@ export class InstancesController {
     return {
       success: true,
       body: result
+    }
+  }
+
+  @Get('/price')
+  @UseGuards(AuthGuard)
+  public async getPriceByInstanceType (@Query('instanceType') instanceType: string): PResBody<{ pricePerHour: number }> {
+    const pricePerHour = await this.instancesService.getTypePricePerHour(instanceType) ?? 0.0117
+
+    return {
+      success: true,
+      body: {
+        pricePerHour
+      }
     }
   }
 

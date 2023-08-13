@@ -53,6 +53,11 @@ export class InstancesService {
     private readonly instanceRepository: Repository<Instance>
   ) {}
 
+  public async countInstancePages (take: number): Promise<number> {
+    const instanceCount = await this.instanceRepository.count()
+    return instanceCount / take
+  }
+
   public async listInstances (take: number, skip: number): Promise<Instance[]> {
     return await this.instanceRepository.find({
       take,
@@ -388,7 +393,7 @@ export class InstancesService {
     await this.ec2Client.send(command)
   }
 
-  private async getTypePricePerHour (instanceType: string): Promise<number | undefined> {
+  public async getTypePricePerHour (instanceType: string): Promise<number | undefined> {
     const command = new GetProductsCommand({
       ServiceCode: 'AmazonEC2',
       Filters: [
