@@ -53,6 +53,16 @@ export class InstancesController {
     }
   }
 
+  @Get('/search')
+  public async searchInstances (@Query('query') query: string, @Query('max_count') maxCount: number): PResBody<Instance[]> {
+    const instances = await this.instancesService.searchInstances(query, maxCount)
+
+    return {
+      success: true,
+      body: instances
+    }
+  }
+
   @Put('/:uuid')
   @UseGuards(AuthGuard)
   public async updateInstance (@Param('uuid') uuid: string, @Body() updateDto: UpdateInstanceDto): PResBody<Instance> {

@@ -32,7 +32,7 @@ import { GetProductsCommand, Pricing } from '@aws-sdk/client-pricing'
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { Instance } from './entity/instance.entity'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { Like, Repository } from 'typeorm'
 import { randomUUID } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -56,6 +56,21 @@ export class InstancesService {
   public async countInstancePages (take: number): Promise<number> {
     const instanceCount = await this.instanceRepository.count()
     return instanceCount / take
+  }
+
+  public async searchInstances (query: string, maxCount: number): Promise<Instance[]> {
+    const likeSearch = Like(`%${query}%`)
+
+    return await this.instanceRepository.find({
+      take: maxCount,
+      where: [
+        { category: likeSearch },
+        { name: likeSearch },
+        { description: likeSearch },
+        { owner: likeSearch },
+        { memo: likeSearch }
+      ]
+    })
   }
 
   public async listInstances (take: number, skip: number): Promise<Instance[]> {
