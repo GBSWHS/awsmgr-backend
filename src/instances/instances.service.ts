@@ -58,11 +58,28 @@ export class InstancesService {
     return Math.ceil(instanceCount / take)
   }
 
-  public async searchInstances (query: string, maxCount: number): Promise<Instance[]> {
+  public async searchInstancePages (query: string, take: number): Promise<number> {
+    const likeSearch = Like(`%${query}%`)
+    const searchResultCount = await this.instanceRepository.count({
+      take,
+      where: [
+        { category: likeSearch },
+        { name: likeSearch },
+        { description: likeSearch },
+        { owner: likeSearch },
+        { memo: likeSearch }
+      ]
+    })
+
+    return Math.ceil(searchResultCount / take)
+  }
+
+  public async searchInstances (query: string, take: number, skip: number): Promise<Instance[]> {
     const likeSearch = Like(`%${query}%`)
 
     return await this.instanceRepository.find({
-      take: maxCount,
+      take,
+      skip,
       where: [
         { category: likeSearch },
         { name: likeSearch },

@@ -54,12 +54,16 @@ export class InstancesController {
   }
 
   @Get('/search')
-  public async searchInstances (@Query('query') query: string, @Query('max_count') maxCount: number): PResBody<Instance[]> {
-    const instances = await this.instancesService.searchInstances(query, maxCount)
+  public async searchInstances (@Query('query') query: string, @Query('take') take: number, @Query('skip') skip: number): PResBody<{ instances: Instance[], pageCount: number }> {
+    const instances = await this.instancesService.searchInstances(query, take, skip)
+    const pageCount = await this.instancesService.searchInstancePages(query, take)
 
     return {
       success: true,
-      body: instances
+      body: {
+        instances,
+        pageCount
+      }
     }
   }
 
