@@ -55,7 +55,7 @@ export class InstancesService {
 
   public async countInstancePages (take: number): Promise<number> {
     const instanceCount = await this.instanceRepository.count()
-    return instanceCount / take
+    return Math.ceil(instanceCount / take)
   }
 
   public async searchInstances (query: string, maxCount: number): Promise<Instance[]> {
