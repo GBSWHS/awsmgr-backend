@@ -430,7 +430,7 @@ export class InstancesService {
     const onDemandPrice = Object.values(priceObject.terms.OnDemand)[0] as any
     const priceDimension = Object.values(onDemandPrice.priceDimensions)[0] as any
 
-    return priceDimension.pricePerUnit.USD
+    return parseFloat(priceDimension.pricePerUnit.USD)
   }
 
   private async updateInstanceType (instanceType: string, ec2Instance: EC2Instance): Promise<void> {
