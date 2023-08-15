@@ -29,6 +29,17 @@ export class InstancesController {
     }
   }
 
+  @Get('/:uuid')
+  @UseGuards(AuthGuard)
+  public async getInstance (@Param('uuid') uuid: string): PResBody<Instance> {
+    const result = await this.instancesService.getInstance(uuid)
+
+    return {
+      success: true,
+      body: result
+    }
+  }
+
   @Post('/')
   @UseGuards(AuthGuard)
   public async createInstance (@Body() instance: Instance): PResBody<Instance> {

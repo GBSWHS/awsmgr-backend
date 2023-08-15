@@ -53,6 +53,10 @@ export class InstancesService {
     private readonly instanceRepository: Repository<Instance>
   ) {}
 
+  public async getInstance (uuid: string): Promise<Instance | undefined> {
+    return await this.instanceRepository.findOneBy({ uuid }) ?? undefined
+  }
+
   public async countInstancePages (take: number): Promise<number> {
     const instanceCount = await this.instanceRepository.count()
     return Math.ceil(instanceCount / take)
