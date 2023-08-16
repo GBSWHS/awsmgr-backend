@@ -3,7 +3,6 @@ import { PResBody } from '../types'
 import { InstancesService } from './instances.service'
 import { Instance } from './entity/instance.entity'
 import { AuthGuard } from '../auth/auth.guard'
-import { UpdateInstanceDto } from './dto/UpdateInstance.dto'
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 
 @ApiTags('instances')
@@ -80,8 +79,8 @@ export class InstancesController {
 
   @Put('/:uuid')
   @UseGuards(AuthGuard)
-  public async updateInstance (@Param('uuid') uuid: string, @Body() updateDto: UpdateInstanceDto): PResBody<Instance> {
-    const result = await this.instancesService.updateInstance(uuid, updateDto)
+  public async updateInstance (@Param('uuid') uuid: string, @Body() modifications: Instance): PResBody<Instance> {
+    const result = await this.instancesService.updateInstance(uuid, modifications)
 
     return {
       success: true,

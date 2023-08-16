@@ -38,7 +38,6 @@ import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { cwd } from 'node:process'
 import { delayInSeconds } from '../utils'
-import { type UpdateInstanceDto } from './dto/UpdateInstance.dto'
 
 @Injectable()
 export class InstancesService {
@@ -180,7 +179,7 @@ export class InstancesService {
     return result
   }
 
-  public async updateInstance (uuid: string, updateDto: UpdateInstanceDto): Promise<Instance> {
+  public async updateInstance (uuid: string, modifications: Instance): Promise<Instance> {
     const instance = await this.instanceRepository.findOneBy({
       uuid
     })
@@ -189,17 +188,17 @@ export class InstancesService {
       throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
     }
 
-    if (updateDto.name !== undefined) {
+    if (modifications.name !== instance.name) {
       throw new BadRequestException('Instance name cannot be changed.')
     }
 
-    if (updateDto.ports !== undefined) {
-      const ports = updateDto.ports.split(',').map((v) => Math.abs(parseInt(v))).filter((v) => !isNaN(v))
+    if (modifications.ports !== instance.ports) {
+      const ports = modifications.ports.split(',').map((v) => Math.abs(parseInt(v))).filter((v) => !isNaN(v))
       await this.updateSecurityGroup(instance.name ?? '', ports)
     }
 
     let pricePerHour: number | undefined
-    if (updateDto.storageSize !== undefined || updateDto.type !== undefined) {
+    if (modifications.storageSize !== instance.storageSize || modifications.type !== instance.type) {
       const ec2Instance = await this.getEC2Instance(instance.name)
       if (ec2Instance === undefined) {
         throw new InternalServerErrorException('Internal error has been occurred during stop instance.')
@@ -208,13 +207,13 @@ export class InstancesService {
       await this.stopEC2Instance(ec2Instance)
       await this.waitForState('stopped', ec2Instance)
 
-      if (updateDto.storageSize !== undefined) {
-        await this.updateRootStorage(updateDto.storageSize, ec2Instance)
+      if (modifications.storageSize !== instance.storageSize) {
+        await this.updateRootStorage(modifications.storageSize, ec2Instance)
       }
 
-      if (updateDto.type !== undefined) {
-        pricePerHour = await this.getTypePricePerHour(updateDto.type)
-        await this.updateInstanceType(updateDto.type, ec2Instance)
+      if (modifications.type !== instance.type) {
+        pricePerHour = await this.getTypePricePerHour(modifications.type)
+        await this.updateInstanceType(modifications.type, ec2Instance)
       }
 
       await this.startEC2Instance(ec2Instance)
@@ -222,9 +221,9 @@ export class InstancesService {
     }
 
     const updateOption = {
-      ...updateDto,
+      ...modifications,
       pricePerHour
-    }
+    } as any
 
     if (pricePerHour === undefined) {
       delete updateOption.pricePerHour
@@ -239,7 +238,7 @@ export class InstancesService {
     return {
       ...instance,
       ...updateOption
-    } as any
+    }
   }
 
   public async deleteInstance (uuid: string): Promise<void> {
