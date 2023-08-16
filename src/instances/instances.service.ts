@@ -46,7 +46,7 @@ export class InstancesService {
     new EC2Client({ region: 'ap-northeast-2' })
 
   private readonly pricingClient =
-    new Pricing({ region: 'us-east-1' })
+    new Pricing({ region: 'ap-south-1' })
 
   constructor (
     @InjectRepository(Instance)
