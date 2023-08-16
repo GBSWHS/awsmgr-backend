@@ -14,7 +14,7 @@ export class InvitesController {
   ) {}
 
   @Get('/:uuid')
-  public async getInviteInstance (uuid: string): PResBody<Instance> {
+  public async getInviteInstance (@Param('uuid') uuid: string): PResBody<Instance> {
     const invite = await this.invitesService.getInviteInstance(uuid)
 
     return {
