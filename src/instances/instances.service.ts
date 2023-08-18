@@ -52,8 +52,24 @@ export class InstancesService {
     private readonly instanceRepository: Repository<Instance>
   ) {}
 
-  public async getInstance (uuid: string): Promise<Instance | undefined> {
-    return await this.instanceRepository.findOneBy({ uuid }) ?? undefined
+  public async getInstance (uuid: string): Promise<Instance & { status?: number } | undefined> {
+    const instance = await this.instanceRepository.findOneBy({ uuid }) ?? undefined
+    if (instance === undefined) {
+      return undefined
+    }
+
+    const command = new DescribeInstancesCommand({
+      Filters: [{
+        Name: 'tag:Name',
+        Values: [instance.name]
+      }]
+    })
+
+    const statuses = await this.ec2Client.send(command)
+    return {
+      ...instance,
+      status: statuses.Reservations?.[0].Instances?.[0]?.State?.Code
+    }
   }
 
   public async countInstancePages (take: number): Promise<number> {
@@ -93,11 +109,24 @@ export class InstancesService {
     })
   }
 
-  public async listInstances (take: number, skip: number): Promise<Instance[]> {
-    return await this.instanceRepository.find({
+  public async listInstances (take: number, skip: number): Promise<Array<Instance & { status?: number }>> {
+    const instances = await this.instanceRepository.find({
       take,
       skip
     })
+
+    const command = new DescribeInstancesCommand({
+      Filters: [{
+        Name: 'tag:Name',
+        Values: instances.map((v) => v.name)
+      }]
+    })
+
+    const statuses = await this.ec2Client.send(command)
+    return instances.map((v) => ({
+      ...v,
+      status: statuses.Reservations?.[0].Instances?.find((i) => i.Tags?.find((t) => t.Key === 'Name' && t.Value === v.name))?.State?.Code
+    }))
   }
 
   public async createInstance (instance: Instance): Promise<Instance> {
