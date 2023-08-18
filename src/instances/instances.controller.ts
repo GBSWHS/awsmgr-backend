@@ -53,14 +53,12 @@ export class InstancesController {
   }
 
   @Get('/price/all')
-  public async getAllPrice (): PResBody<{ pricePerHour: number }> {
-    const pricePerHour = await this.instancesService.getAllPricePerHour() ?? 0
+  public async getAllPrice (): PResBody<{ pricePerHour: number, storageSize: number }> {
+    const allPrice = await this.instancesService.getAllPricePerHour() ?? 0
 
     return {
       success: true,
-      body: {
-        pricePerHour
-      }
+      body: allPrice
     }
   }
 

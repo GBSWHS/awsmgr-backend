@@ -428,14 +428,18 @@ export class InstancesService {
     await this.ec2Client.send(command)
   }
 
-  public async getAllPricePerHour (): Promise<number> {
+  public async getAllPricePerHour (): Promise<{ pricePerHour: number, storageSize: number }> {
     const instances = await this.instanceRepository.find({
       select: {
-        pricePerHour: true
+        pricePerHour: true,
+        storageSize: true
       }
     })
 
-    return instances.reduce((prev, curr) => prev + curr.pricePerHour, 0)
+    return {
+      pricePerHour: instances.reduce((prev, curr) => prev + curr.pricePerHour, 0),
+      storageSize: instances.reduce((prev, curr) => prev + curr.storageSize, 0)
+    }
   }
 
   public async getTypePricePerHour (instanceType: string): Promise<number | undefined> {
