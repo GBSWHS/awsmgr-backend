@@ -52,6 +52,18 @@ export class InstancesController {
     }
   }
 
+  @Get('/price/all')
+  public async getAllPrice (): PResBody<{ pricePerHour: number }> {
+    const pricePerHour = await this.instancesService.getAllPricePerHour() ?? 0
+
+    return {
+      success: true,
+      body: {
+        pricePerHour
+      }
+    }
+  }
+
   @Get('/search')
   public async searchInstances (@Query('query') query: string, @Query('take') take: number, @Query('skip') skip: number): PResBody<{ instances: Instance[], pageCount: number }> {
     const instances = await this.instancesService.searchInstances(query, take, skip)

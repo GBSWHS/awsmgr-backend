@@ -428,6 +428,16 @@ export class InstancesService {
     await this.ec2Client.send(command)
   }
 
+  public async getAllPricePerHour (): Promise<number> {
+    const instances = await this.instanceRepository.find({
+      select: {
+        pricePerHour: true
+      }
+    })
+
+    return instances.reduce((prev, curr) => prev + curr.pricePerHour, 0)
+  }
+
   public async getTypePricePerHour (instanceType: string): Promise<number | undefined> {
     const command = new GetProductsCommand({
       ServiceCode: 'AmazonEC2',
