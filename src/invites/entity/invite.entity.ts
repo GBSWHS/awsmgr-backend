@@ -1,5 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
-import { IsOptional, IsUUID } from 'class-validator'
+import { IsOptional, IsString, IsUUID } from 'class-validator'
 import { ApiProperty } from '@nestjs/swagger'
 
 @Entity()
@@ -11,6 +11,7 @@ export class Invite {
   public readonly id: string
 
   @ApiProperty()
+  @IsString()
   @Column()
   public readonly instanceID: string
 }
