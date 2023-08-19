@@ -18,79 +18,79 @@ export class InvitesService {
   ) {}
 
   public async createInvite (invite: Invite): Promise<Invite> {
-    const uuid = randomUUID()
+    const id = randomUUID()
     const instance = await this.instanceRepository.findOneBy({
-      uuid: invite.instanceUUID
+      id: invite.instanceID
     })
 
     if (instance === null) {
-      throw new NotFoundException(`Cannot found instance uuid: "${invite.instanceUUID}"`)
+      throw new NotFoundException(`Cannot found instance id: "${invite.instanceID}"`)
     }
 
     await this.inviteRepository.insert({
-      uuid,
-      instanceUUID: invite.instanceUUID
+      id,
+      instanceID: invite.instanceID
     })
 
     return {
-      uuid,
-      instanceUUID: invite.instanceUUID
+      id,
+      instanceID: invite.instanceID
     }
   }
 
-  public async getInviteInstance (uuid: string): Promise<Instance> {
+  public async getInviteInstance (id: string): Promise<Instance> {
     const invite = await this.inviteRepository.findOneBy({
-      uuid
+      id
     })
 
     if (invite === null) {
-      throw new NotFoundException(`Cannot found invite uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found invite id: "${id}"`)
     }
 
     const instance = await this.instanceRepository.findOneBy({
-      uuid: invite.instanceUUID
+      id: invite.instanceID
     })
 
     if (instance === null) {
-      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found instance id: "${id}"`)
     }
 
     return instance
   }
 
-  public async restartInviteInstance (uuid: string): Promise<void> {
+  public async restartInviteInstance (id: string): Promise<void> {
     const invite = await this.inviteRepository.findOneBy({
-      uuid
+      id
     })
 
     if (invite === null) {
-      throw new NotFoundException(`Cannot found invite uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found invite id: "${id}"`)
     }
 
-    await this.instancesService.restartInstance(invite.instanceUUID)
+    await this.instancesService.restartInstance(invite.instanceID)
   }
 
-  public async resetInviteInstance (uuid: string): Promise<void> {
+  public async resetInviteInstance (id: string): Promise<void> {
     const invite = await this.inviteRepository.findOneBy({
-      uuid
+      id
     })
 
     if (invite === null) {
-      throw new NotFoundException(`Cannot found invite uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found invite id: "${id}"`)
     }
 
-    await this.instancesService.resetInstance(invite.instanceUUID)
+    await this.instancesService.resetInstance(invite.instanceID)
   }
 
-  public async getInviteInstanceKeypair (uuid: string): Promise<string> {
+  public async getInviteInstanceKeypair (id: string): Promise<string> {
     const invite = await this.inviteRepository.findOneBy({
-      uuid
+      id
     })
 
     if (invite === null) {
-      throw new NotFoundException(`Cannot found invite uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found invite id: "${id}"`)
     }
 
-    return await this.instancesService.getInstanceKeypair(invite.instanceUUID)
+    return await this.instancesService.getInstanceKeypair(invite.instanceID)
   }
 }

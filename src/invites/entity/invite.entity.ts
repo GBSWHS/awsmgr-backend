@@ -8,10 +8,9 @@ export class Invite {
   @IsOptional()
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  public readonly uuid: string
+  public readonly id: string
 
-  @IsUUID()
   @ApiProperty()
   @Column()
-  public readonly instanceUUID: string
+  public readonly instanceID: string
 }

@@ -53,10 +53,10 @@ export class InstancesController {
     }
   }
 
-  @Get('/:uuid')
+  @Get('/:instanceId')
   @UseGuards(AuthGuard)
-  public async getInstance (@Param('uuid') uuid: string): PResBody<Instance> {
-    const result = await this.managedInstancesService.getInstance(uuid)
+  public async getInstance (@Param('instanceId') instanceId: string): PResBody<Instance> {
+    const result = await this.managedInstancesService.getInstance(instanceId)
 
     return {
       success: true,
@@ -64,10 +64,10 @@ export class InstancesController {
     }
   }
 
-  @Put('/:uuid')
+  @Put('/:instanceId')
   @UseGuards(AuthGuard)
-  public async updateInstance (@Param('uuid') uuid: string, @Body() modifications: Instance): PResBody<Instance> {
-    const result = await this.managedInstancesService.updateInstance(uuid, modifications)
+  public async updateInstance (@Param('instanceId') instanceId: string, @Body() modifications: Instance): PResBody<Instance> {
+    const result = await this.managedInstancesService.updateInstance(instanceId, modifications)
 
     return {
       success: true,
@@ -75,40 +75,40 @@ export class InstancesController {
     }
   }
 
-  @Delete('/:uuid')
+  @Delete('/:instanceId')
   @UseGuards(AuthGuard)
-  public async deleteInstance (@Param('uuid') uuid: string): PResBody {
-    await this.managedInstancesService.deleteInstance(uuid)
+  public async deleteInstance (@Param('instanceId') instanceId: string): PResBody {
+    await this.managedInstancesService.deleteInstance(instanceId)
 
     return {
       success: true
     }
   }
 
-  @Post('/:uuid/restart')
+  @Post('/:instanceId/restart')
   @UseGuards(AuthGuard)
-  public async restartInstance (@Param('uuid') uuid: string): PResBody {
-    await this.managedInstancesService.restartInstance(uuid)
+  public async restartInstance (@Param('instanceId') instanceId: string): PResBody {
+    await this.managedInstancesService.restartInstance(instanceId)
 
     return {
       success: true
     }
   }
 
-  @Post('/:uuid/reset')
+  @Post('/:instanceId/reset')
   @UseGuards(AuthGuard)
-  public async resetInstance (@Param('uuid') uuid: string): PResBody {
-    await this.managedInstancesService.resetInstance(uuid)
+  public async resetInstance (@Param('instanceId') instanceId: string): PResBody {
+    await this.managedInstancesService.resetInstance(instanceId)
 
     return {
       success: true
     }
   }
 
-  @Get('/:uuid/keypair')
+  @Get('/:instanceId/keypair')
   @UseGuards(AuthGuard)
-  public async getInstanceKeypair (@Param('uuid') uuid: string): PResBody<string> {
-    const keypair = await this.managedInstancesService.getInstanceKeypair(uuid)
+  public async getInstanceKeypair (@Param('instanceId') instanceId: string): PResBody<string> {
+    const keypair = await this.managedInstancesService.getInstanceKeypair(instanceId)
 
     return {
       success: true,

@@ -24,17 +24,17 @@ export class ManagedInstancesService {
     private readonly utilsService: UtilsService
   ) {}
 
-  public async getInstance (uuid: string): Promise<Instance & { status?: number } | undefined> {
-    const instance = await this.instanceRepository.findOneBy({ uuid }) ?? undefined
+  public async getInstance (id: string): Promise<Instance & { state?: number } | undefined> {
+    const instance = await this.instanceRepository.findOneBy({ id }) ?? undefined
     if (instance === undefined) {
-      return undefined
+      throw new NotFoundException(`Instance id: ${id} not found.`)
     }
 
-    const ec2Instance = await this.ec2InstancesService.getEC2Instance(instance.name)
+    const status = await this.ec2InstancesService.getEC2InstanceStatus(id)
 
     return {
       ...instance,
-      status: ec2Instance?.State?.Code
+      state: status?.InstanceState?.Code
     }
   }
 
@@ -52,7 +52,9 @@ export class ManagedInstancesService {
         { name: likeSearch },
         { description: likeSearch },
         { owner: likeSearch },
-        { memo: likeSearch }
+        { memo: likeSearch },
+        { publicIP: likeSearch },
+        { id: likeSearch }
       ]
     })
 
@@ -70,23 +72,28 @@ export class ManagedInstancesService {
         { name: likeSearch },
         { description: likeSearch },
         { owner: likeSearch },
-        { memo: likeSearch }
+        { memo: likeSearch },
+        { publicIP: likeSearch },
+        { id: likeSearch }
       ]
     })
   }
 
-  public async listInstances (take: number, skip: number): Promise<Array<Instance & { status?: number }>> {
+  public async listInstances (take: number, skip: number): Promise<Array<Instance & { state?: number }>> {
     const instances = await this.instanceRepository.find({
       take,
       skip
     })
 
-    const statuses =
-      await this.ec2InstancesService.listEC2Instances(instances.map((v) => v.name))
+    if (instances.length < 1) {
+      return []
+    }
+
+    const statuses = await this.ec2InstancesService.getEC2InstanceStatus(instances.map((v) => v.id))
 
     return instances.map((v) => ({
       ...v,
-      status: statuses?.find((i) => i.Tags?.find((t) => t.Key === 'Name' && t.Value === v.name))?.State?.Code
+      state: statuses?.find((i) => i.InstanceId === v.id)?.InstanceState?.Code
     }))
   }
 
@@ -97,7 +104,7 @@ export class ManagedInstancesService {
 
     if (isAlreadyExist !== null) {
       throw new BadRequestException({
-        message: `Instance "${instance.name}" already exists.`
+        message: `Instance name "${instance.name}" already exists.`
       })
     }
 
@@ -149,9 +156,9 @@ export class ManagedInstancesService {
       })
     }
 
-    await this.utilsService.waitForState('running', ec2Instance)
+    await this.utilsService.waitForState(ec2Instance.InstanceId ?? '', 'running')
 
-    const publicIP = await this.networksService.attachEIP(ec2Instance)
+    const publicIP = await this.networksService.attachEIP(ec2Instance.InstanceId ?? '')
     if (publicIP === undefined) {
       throw new InternalServerErrorException({
         message: 'Internal error has been occurred during attach EIP.'
@@ -162,20 +169,21 @@ export class ManagedInstancesService {
       ...instance,
       publicIP,
       keypairId,
-      pricePerHour: price
+      pricePerHour: price,
+      id: ec2Instance.InstanceId ?? ''
     }
 
     await this.instanceRepository.insert(result)
     return result
   }
 
-  public async updateInstance (uuid: string, modifications: Instance): Promise<Instance> {
+  public async updateInstance (id: string, modifications: Instance): Promise<Instance> {
     const instance = await this.instanceRepository.findOneBy({
-      uuid
+      id
     })
 
     if (instance === null) {
-      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found instance id: "${id}"`)
     }
 
     if (modifications.name !== instance.name) {
@@ -189,25 +197,23 @@ export class ManagedInstancesService {
 
     let pricePerHour: number | undefined
     if (modifications.storageSize !== instance.storageSize || modifications.type !== instance.type) {
-      const ec2Instance = await this.ec2InstancesService.getEC2Instance(instance.name)
-      if (ec2Instance === undefined) {
-        throw new InternalServerErrorException('Internal error has been occurred during stop instance.')
-      }
-
-      await this.ec2InstancesService.stopEC2Instance(ec2Instance)
-      await this.utilsService.waitForState('stopped', ec2Instance)
+      await this.ec2InstancesService.stopEC2Instance(instance.id)
+      await this.utilsService.waitForState(instance.id, 'stopped')
 
       if (modifications.storageSize !== instance.storageSize) {
-        await this.storagesService.updateRootStorage(modifications.storageSize, ec2Instance)
+        const ec2Instance = await this.ec2InstancesService.getEC2Instance(instance.id)
+        const volumeId = ec2Instance?.BlockDeviceMappings?.[0].Ebs?.VolumeId
+
+        await this.storagesService.updateRootStorage(volumeId ?? '', modifications.storageSize)
       }
 
       if (modifications.type !== instance.type) {
         pricePerHour = await this.pricesService.getTypePricePerHour(modifications.type)
-        await this.ec2InstancesService.updateEC2InstanceType(modifications.type, ec2Instance)
+        await this.ec2InstancesService.updateEC2InstanceType(instance.id, modifications.type)
       }
 
-      await this.ec2InstancesService.startEC2Instance(ec2Instance)
-      await this.utilsService.waitForState('running', ec2Instance)
+      await this.ec2InstancesService.startEC2Instance(instance.id)
+      await this.utilsService.waitForState(instance.id, 'running')
     }
 
     const updateOption = {
@@ -219,11 +225,11 @@ export class ManagedInstancesService {
       delete updateOption.pricePerHour
     }
 
-    delete updateOption.uuid
+    delete updateOption.id
     delete updateOption.keypairId
     delete updateOption.publicIP
 
-    await this.instanceRepository.update({ uuid }, updateOption)
+    await this.instanceRepository.update({ id }, updateOption)
 
     return {
       ...instance,
@@ -231,70 +237,59 @@ export class ManagedInstancesService {
     }
   }
 
-  public async deleteInstance (uuid: string): Promise<void> {
+  public async deleteInstance (id: string): Promise<void> {
     const instance = await this.instanceRepository.findOneBy({
-      uuid
+      id
     })
 
     if (instance === null) {
-      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found instance id: "${id}"`)
     }
 
-    const ec2Instance = await this.ec2InstancesService.getEC2Instance(instance.name)
-    if (ec2Instance === undefined) {
-      throw new InternalServerErrorException('Internal error has been occurred during delete instance.')
-    }
-
-    await this.networksService.detachEIP(ec2Instance)
+    await this.networksService.detachEIP(instance.id)
     await this.keypairsService.deleteKeypair(instance.name)
 
-    await this.ec2InstancesService.deleteEC2Instance(ec2Instance)
-    await this.utilsService.waitForState('terminated', ec2Instance)
+    await this.ec2InstancesService.deleteEC2Instance(instance.id)
+    await this.utilsService.waitForState(instance.id, 'terminated')
 
     await this.sgService.deleteSecurityGroup(instance.name)
 
     await this.instanceRepository.delete({
-      uuid
+      id
     })
   }
 
-  public async restartInstance (uuid: string): Promise<void> {
+  public async restartInstance (id: string): Promise<void> {
     const instance = await this.instanceRepository.findOneBy({
-      uuid
+      id
     })
 
     if (instance === null) {
-      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found instance id: "${id}"`)
     }
 
-    const ec2Instance = await this.ec2InstancesService.getEC2Instance(instance.name)
-    if (ec2Instance === undefined) {
-      throw new InternalServerErrorException('Internal error has been occurred during restart instance.')
-    }
+    await this.ec2InstancesService.restartEC2Instance(id)
   }
 
-  public async resetInstance (uuid: string): Promise<void> {
+  public async resetInstance (id: string): Promise<void> {
     const instance = await this.instanceRepository.findOneBy({
-      uuid
+      id
     })
 
     if (instance === null) {
-      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found instance id: "${id}"`)
     }
 
-    const ec2Instance = await this.ec2InstancesService.getEC2Instance(instance.name)
-    if (ec2Instance === undefined) {
-      throw new InternalServerErrorException('Internal error has been occurred during reset instance.')
-    }
+    await this.storagesService.resetRootSorage(instance.id)
   }
 
-  public async getInstanceKeypair (uuid: string): Promise<string> {
+  public async getInstanceKeypair (id: string): Promise<string> {
     const instance = await this.instanceRepository.findOneBy({
-      uuid
+      id
     })
 
     if (instance === null) {
-      throw new NotFoundException(`Cannot found instance uuid: "${uuid}"`)
+      throw new NotFoundException(`Cannot found instance id: "${id}"`)
     }
 
     return await this.keypairsService.loadKeypair(instance.keypairId)

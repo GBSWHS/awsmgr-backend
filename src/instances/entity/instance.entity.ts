@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { IsIP, IsInt, IsNumber, IsOptional, IsPositive, IsString, IsUUID } from 'class-validator'
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, Entity, PrimaryColumn } from 'typeorm'
 
 @Entity()
 export class Instance {
   @IsUUID()
   @IsOptional()
   @ApiProperty()
-  @PrimaryGeneratedColumn('uuid')
-  public readonly uuid: string
+  @PrimaryColumn()
+  public readonly id: string
 
   @IsString()
   @ApiProperty()

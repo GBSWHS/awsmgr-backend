@@ -1,4 +1,19 @@
-import { EC2Client, ModifyInstanceAttributeCommand, type Instance as EC2Instance, DescribeInstancesCommand, RunInstancesCommand, type KeyPair, type Subnet, type Image, StopInstancesCommand, StartInstancesCommand, TerminateInstancesCommand, RebootInstancesCommand } from '@aws-sdk/client-ec2'
+import {
+  EC2Client,
+  ModifyInstanceAttributeCommand,
+  type Instance as EC2Instance,
+  DescribeInstancesCommand,
+  RunInstancesCommand,
+  type KeyPair,
+  type Subnet,
+  type Image,
+  StopInstancesCommand,
+  StartInstancesCommand,
+  TerminateInstancesCommand,
+  RebootInstancesCommand,
+  DescribeInstanceStatusCommand,
+  type InstanceStatus
+} from '@aws-sdk/client-ec2'
 import { PricingClient } from '@aws-sdk/client-pricing'
 import { Injectable } from '@nestjs/common'
 
@@ -10,28 +25,31 @@ export class EC2InstancesService {
   private readonly pricingClient =
     new PricingClient({ region: 'ap-south-1' })
 
-  public async getEC2Instance (name: string): Promise<EC2Instance | undefined> {
+  public async getEC2Instance (id: string): Promise<EC2Instance | undefined> {
     const command = new DescribeInstancesCommand({
-      Filters: [
-        {
-          Name: 'tag:Name',
-          Values: [name]
-        }
-      ]
+      InstanceIds: [id]
     })
 
     const response = await this.ec2Client.send(command)
     return response.Reservations?.[0]?.Instances?.[0]
   }
 
-  public async listEC2Instances (names: string[]): Promise<EC2Instance[] | undefined> {
+  public async getEC2InstanceStatus (id: string): Promise<InstanceStatus | undefined>
+  public async getEC2InstanceStatus (ids: string[]): Promise<InstanceStatus[] | undefined>
+  public async getEC2InstanceStatus (idOrIds: string[] | string): Promise<InstanceStatus | InstanceStatus[] | undefined> {
+    const command = new DescribeInstanceStatusCommand({
+      InstanceIds: Array.isArray(idOrIds) ? idOrIds : [idOrIds]
+    })
+
+    const response = await this.ec2Client.send(command)
+    const instanceStatuses = response.InstanceStatuses
+
+    return Array.isArray(idOrIds) ? instanceStatuses : instanceStatuses?.[0]
+  }
+
+  public async listEC2Instances (ids: string[]): Promise<EC2Instance[] | undefined> {
     const command = new DescribeInstancesCommand({
-      Filters: [
-        {
-          Name: 'tag:Name',
-          Values: names
-        }
-      ]
+      InstanceIds: ids
     })
 
     const response = await this.ec2Client.send(command)
@@ -81,46 +99,44 @@ export class EC2InstancesService {
     return result.Instances?.[0]
   }
 
-  public async stopEC2Instance (ec2Instance: EC2Instance): Promise<void> {
+  public async stopEC2Instance (id: string): Promise<void> {
     const command = new StopInstancesCommand({
-      InstanceIds: [ec2Instance.InstanceId ?? '']
+      InstanceIds: [id]
     })
 
     await this.ec2Client.send(command)
   }
 
-  public async startEC2Instance (ec2Instance: EC2Instance): Promise<void> {
+  public async startEC2Instance (id: string): Promise<void> {
     const command = new StartInstancesCommand({
-      InstanceIds: [ec2Instance.InstanceId ?? '']
+      InstanceIds: [id]
     })
 
     await this.ec2Client.send(command)
   }
 
-  public async restartEC2Instance (ec2Instance: EC2Instance): Promise<void> {
+  public async restartEC2Instance (id: string): Promise<void> {
     const command = new RebootInstancesCommand({
-      InstanceIds: [ec2Instance.InstanceId ?? '']
+      InstanceIds: [id]
     })
 
     await this.ec2Client.send(command)
   }
 
-  public async deleteEC2Instance (ec2Instance: EC2Instance): Promise<void> {
+  public async deleteEC2Instance (id: string): Promise<void> {
     const command = new TerminateInstancesCommand({
-      InstanceIds: [
-        ec2Instance.InstanceId ?? ''
-      ]
+      InstanceIds: [id]
     })
 
     await this.ec2Client.send(command)
   }
 
-  public async updateEC2InstanceType (instanceType: string, ec2Instance: EC2Instance): Promise<void> {
+  public async updateEC2InstanceType (id: string, type: string): Promise<void> {
     const command = new ModifyInstanceAttributeCommand({
       InstanceType: {
-        Value: instanceType
+        Value: type
       },
-      InstanceId: ec2Instance.InstanceId
+      InstanceId: id
     })
 
     await this.ec2Client.send(command)

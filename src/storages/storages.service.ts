@@ -1,4 +1,4 @@
-import { DescribeImagesCommand, type Image, ModifyVolumeCommand, type Instance as EC2Instance, EC2Client, CreateReplaceRootVolumeTaskCommand } from '@aws-sdk/client-ec2'
+import { DescribeImagesCommand, type Image, ModifyVolumeCommand, EC2Client, CreateReplaceRootVolumeTaskCommand } from '@aws-sdk/client-ec2'
 import { Injectable } from '@nestjs/common'
 
 @Injectable()
@@ -23,17 +23,16 @@ export class StoragesService {
         new Date(a.CreationDate ?? '').getTime())[0]
   }
 
-  public async resetRootSorage (ec2Instance: EC2Instance): Promise<void> {
+  public async resetRootSorage (instanceId: string): Promise<void> {
     const command = new CreateReplaceRootVolumeTaskCommand({
-      InstanceId: ec2Instance.InstanceId ?? '',
+      InstanceId: instanceId,
       DeleteReplacedRootVolume: true
     })
 
     await this.ec2Client.send(command)
   }
 
-  public async updateRootStorage (size: number, ec2Instance: EC2Instance): Promise<void> {
-    const volumeId = ec2Instance.BlockDeviceMappings?.[0].Ebs?.VolumeId
+  public async updateRootStorage (volumeId: string, size: number): Promise<void> {
     const command = new ModifyVolumeCommand({
       VolumeId: volumeId,
       Size: size

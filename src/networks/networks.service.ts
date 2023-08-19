@@ -1,4 +1,4 @@
-import { AllocateAddressCommand, AssociateAddressCommand, DescribeAddressesCommand, DescribeSubnetsCommand, DisassociateAddressCommand, EC2Client, ReleaseAddressCommand, type Subnet, type Instance as EC2Instance } from '@aws-sdk/client-ec2'
+import { AllocateAddressCommand, AssociateAddressCommand, DescribeAddressesCommand, DescribeSubnetsCommand, DisassociateAddressCommand, EC2Client, ReleaseAddressCommand, type Subnet } from '@aws-sdk/client-ec2'
 import { Injectable } from '@nestjs/common'
 
 @Injectable()
@@ -17,7 +17,7 @@ export class NetworksService {
     return response.Subnets?.[0]
   }
 
-  public async attachEIP (ec2Instance: EC2Instance): Promise<string | undefined> {
+  public async attachEIP (instanceId: string): Promise<string | undefined> {
     const createCommand = new AllocateAddressCommand({
       Domain: 'vpc'
     })
@@ -28,7 +28,7 @@ export class NetworksService {
     }
 
     const attachCommand = new AssociateAddressCommand({
-      InstanceId: ec2Instance.InstanceId,
+      InstanceId: instanceId,
       AllocationId: response.AllocationId
     })
 
@@ -36,11 +36,11 @@ export class NetworksService {
     return response.PublicIp
   }
 
-  public async detachEIP (ec2Instance: EC2Instance): Promise<void> {
+  public async detachEIP (instanceId: string): Promise<void> {
     const eipCommand = new DescribeAddressesCommand({
       Filters: [{
         Name: 'instance-id',
-        Values: [ec2Instance.InstanceId ?? '']
+        Values: [instanceId]
       }]
     })
     const eip = await this.ec2Client.send(eipCommand)

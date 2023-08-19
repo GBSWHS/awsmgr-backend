@@ -13,9 +13,9 @@ export class InvitesController {
     private readonly invitesService: InvitesService
   ) {}
 
-  @Get('/:uuid')
-  public async getInviteInstance (@Param('uuid') uuid: string): PResBody<Instance> {
-    const invite = await this.invitesService.getInviteInstance(uuid)
+  @Get('/:id')
+  public async getInviteInstance (@Param('id') id: string): PResBody<Instance> {
+    const invite = await this.invitesService.getInviteInstance(id)
 
     return {
       success: true,
@@ -35,27 +35,27 @@ export class InvitesController {
     }
   }
 
-  @Post('/:uuid/restart')
-  public async restartInviteInstance (@Param('uuid') uuid: string): PResBody {
-    await this.invitesService.restartInviteInstance(uuid)
+  @Post('/:id/restart')
+  public async restartInviteInstance (@Param('id') id: string): PResBody {
+    await this.invitesService.restartInviteInstance(id)
 
     return {
       success: true
     }
   }
 
-  @Post('/:uuid/reset')
-  public async resetInviteInstance (@Param('uuid') uuid: string): PResBody {
-    await this.invitesService.resetInviteInstance(uuid)
+  @Post('/:id/reset')
+  public async resetInviteInstance (@Param('id') id: string): PResBody {
+    await this.invitesService.resetInviteInstance(id)
 
     return {
       success: true
     }
   }
 
-  @Get('/:uuid/keypair')
-  public async getInviteInstanceKeypair (@Param('uuid') uuid: string): PResBody<string> {
-    const keypair = await this.invitesService.getInviteInstanceKeypair(uuid)
+  @Get('/:id/keypair')
+  public async getInviteInstanceKeypair (@Param('id') id: string): PResBody<string> {
+    const keypair = await this.invitesService.getInviteInstanceKeypair(id)
 
     return {
       success: true,
