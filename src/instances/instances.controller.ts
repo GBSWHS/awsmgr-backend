@@ -1,16 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UseGuards } from '@nestjs/common'
 import { PResBody } from '../types'
 import { ManagedInstancesService } from './managedinstances.service'
 import { Instance } from './entity/instance.entity'
 import { AuthGuard } from '../auth/auth.guard'
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
+import { Response } from 'express'
+import { NoticeGateway } from '../notice/notice.gateway'
 
 @ApiTags('instances')
 @ApiCookieAuth()
 @Controller('/instances')
 export class InstancesController {
   constructor (
-    private readonly managedInstancesService: ManagedInstancesService
+    private readonly managedInstancesService: ManagedInstancesService,
+    private readonly noticeGateway: NoticeGateway
   ) {}
 
   @Get('/')
@@ -30,13 +33,20 @@ export class InstancesController {
 
   @Post('/')
   @UseGuards(AuthGuard)
-  public async createInstance (@Body() instance: Instance): PResBody<Instance> {
-    const result = await this.managedInstancesService.createInstance(instance)
+  // event-driven
+  public async createInstance (@Res() res: Response, @Body() instance: Instance): Promise<void> {
+    res.send({ success: true })
 
-    return {
-      success: true,
-      body: result
-    }
+    await this.managedInstancesService.createInstance(instance)
+      .catch(this.noticeGateway.handleErrorMessage({
+        type: 'Error',
+        message: '인스턴스 생성 중 문제가 발생하였습니다.'
+      }))
+
+    this.noticeGateway.send({
+      type: 'Success',
+      message: '인스턴스를 성공적으로 생성했습니다.'
+    })
   }
 
   @Get('/search')
@@ -66,43 +76,71 @@ export class InstancesController {
 
   @Put('/:instanceId')
   @UseGuards(AuthGuard)
-  public async updateInstance (@Param('instanceId') instanceId: string, @Body() modifications: Instance): PResBody<Instance> {
-    const result = await this.managedInstancesService.updateInstance(instanceId, modifications)
+  // event-driven
+  public async updateInstance (@Res() res: Response, @Param('instanceId') instanceId: string, @Body() modifications: Instance): Promise<void> {
+    res.send({ success: true })
 
-    return {
-      success: true,
-      body: result
-    }
+    await this.managedInstancesService.updateInstance(instanceId, modifications)
+      .catch(this.noticeGateway.handleErrorMessage({
+        type: 'Error',
+        message: '인스턴스 수정 중 문제가 발생하였습니다.'
+      }))
+
+    this.noticeGateway.send({
+      type: 'Success',
+      message: '인스턴스를 성공적으로 수정했습니다.'
+    })
   }
 
   @Delete('/:instanceId')
   @UseGuards(AuthGuard)
-  public async deleteInstance (@Param('instanceId') instanceId: string): PResBody {
-    await this.managedInstancesService.deleteInstance(instanceId)
+  public async deleteInstance (@Res() res: Response, @Param('instanceId') instanceId: string): Promise<void> {
+    res.send({ success: true })
 
-    return {
-      success: true
-    }
+    await this.managedInstancesService.deleteInstance(instanceId)
+      .catch(this.noticeGateway.handleErrorMessage({
+        type: 'Error',
+        message: '인스턴스 삭제 중 문제가 발생하였습니다.'
+      }))
+
+    this.noticeGateway.send({
+      type: 'Success',
+      message: '인스턴스를 성공적으로 삭제했습니다.'
+    })
   }
 
   @Post('/:instanceId/restart')
   @UseGuards(AuthGuard)
-  public async restartInstance (@Param('instanceId') instanceId: string): PResBody {
-    await this.managedInstancesService.restartInstance(instanceId)
+  public async restartInstance (@Res() res: Response, @Param('instanceId') instanceId: string): Promise<void> {
+    res.send({ success: true })
 
-    return {
-      success: true
-    }
+    await this.managedInstancesService.restartInstance(instanceId)
+      .catch(this.noticeGateway.handleErrorMessage({
+        type: 'Error',
+        message: '인스턴스 재시작 중 문제가 발생하였습니다.'
+      }))
+
+    this.noticeGateway.send({
+      type: 'Success',
+      message: '인스턴스를 성공적으로 재시작했습니다.'
+    })
   }
 
   @Post('/:instanceId/reset')
   @UseGuards(AuthGuard)
-  public async resetInstance (@Param('instanceId') instanceId: string): PResBody {
-    await this.managedInstancesService.resetInstance(instanceId)
+  public async resetInstance (@Res() res: Response, @Param('instanceId') instanceId: string): Promise<void> {
+    res.send({ success: true })
 
-    return {
-      success: true
-    }
+    await this.managedInstancesService.resetInstance(instanceId)
+      .catch(this.noticeGateway.handleErrorMessage({
+        type: 'Error',
+        message: '인스턴스 초기화 중 문제가 발생하였습니다.'
+      }))
+
+    this.noticeGateway.send({
+      type: 'Success',
+      message: '인스턴스를 성공적으로 초기화했습니다.'
+    })
   }
 
   @Get('/:instanceId/keypair')

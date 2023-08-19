@@ -10,6 +10,7 @@ import { NetworksModule } from '../networks/networks.module'
 import { KeypairsModule } from '../keypairs/keypairs.module'
 import { SecurityGroupsModule } from '../securitygroups/securitygroups.module'
 import { UtilsModule } from '../utils/utils.module'
+import { NoticeModule } from '../notice/notice.module'
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { UtilsModule } from '../utils/utils.module'
     SecurityGroupsModule,
     KeypairsModule,
     NetworksModule,
-    forwardRef(() => UtilsModule)
+    forwardRef(() => UtilsModule),
+    NoticeModule
   ],
   controllers: [InstancesController],
   providers: [

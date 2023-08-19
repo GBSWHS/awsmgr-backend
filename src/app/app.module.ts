@@ -6,6 +6,7 @@ import { LoggerModule } from '../logger/logger.module'
 import { AuthModule } from '../auth/auth.module'
 import { AuthMiddleware } from '../auth/auth.middleware'
 import { InvitesModule } from '../invites/invites.module'
+import { NoticeModule } from '../notice/notice.module'
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { InvitesModule } from '../invites/invites.module'
     }),
     InstancesModule,
     InvitesModule,
-    AuthModule
+    AuthModule,
+    NoticeModule
   ],
   controllers: [],
   providers: []

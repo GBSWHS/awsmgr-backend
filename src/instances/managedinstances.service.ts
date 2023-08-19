@@ -9,6 +9,7 @@ import { SecurityGroupsService } from '../securitygroups/securitygroups.service'
 import { NetworksService } from '../networks/networks.service'
 import { KeypairsService } from '../keypairs/keypairs.service'
 import { UtilsService } from '../utils/utils.service'
+import { NoticeGateway } from '../notice/notice.gateway'
 
 @Injectable()
 export class ManagedInstancesService {
@@ -21,7 +22,8 @@ export class ManagedInstancesService {
     private readonly sgService: SecurityGroupsService,
     private readonly networksService: NetworksService,
     private readonly keypairsService: KeypairsService,
-    private readonly utilsService: UtilsService
+    private readonly utilsService: UtilsService,
+    private readonly noticeGateway: NoticeGateway
   ) {}
 
   public async getInstance (id: string): Promise<Instance & { state?: number } | undefined> {
