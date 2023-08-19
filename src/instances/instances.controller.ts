@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common'
 import { PResBody } from '../types'
-import { InstancesService } from './instances.service'
+import { ManagedInstancesService } from './managedinstances.service'
 import { Instance } from './entity/instance.entity'
 import { AuthGuard } from '../auth/auth.guard'
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
@@ -10,14 +10,14 @@ import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 @Controller('/instances')
 export class InstancesController {
   constructor (
-    private readonly instancesService: InstancesService
+    private readonly managedInstancesService: ManagedInstancesService
   ) {}
 
   @Get('/')
   @UseGuards(AuthGuard)
   public async listInstances (@Query('take') take: number, @Query('skip') skip: number): PResBody<{ instances: Instance[], pageCount: number }> {
-    const instances = await this.instancesService.listInstances(take, skip)
-    const pageCount = await this.instancesService.countInstancePages(take)
+    const instances = await this.managedInstancesService.listInstances(take, skip)
+    const pageCount = await this.managedInstancesService.countInstancePages(take)
 
     return {
       success: true,
@@ -31,7 +31,7 @@ export class InstancesController {
   @Post('/')
   @UseGuards(AuthGuard)
   public async createInstance (@Body() instance: Instance): PResBody<Instance> {
-    const result = await this.instancesService.createInstance(instance)
+    const result = await this.managedInstancesService.createInstance(instance)
 
     return {
       success: true,
@@ -39,33 +39,10 @@ export class InstancesController {
     }
   }
 
-  @Get('/price')
-  @UseGuards(AuthGuard)
-  public async getPriceByInstanceType (@Query('instanceType') instanceType: string): PResBody<{ pricePerHour: number }> {
-    const pricePerHour = await this.instancesService.getTypePricePerHour(instanceType) ?? 0.0117
-
-    return {
-      success: true,
-      body: {
-        pricePerHour
-      }
-    }
-  }
-
-  @Get('/price/all')
-  public async getAllPrice (): PResBody<{ pricePerHour: number, storageSize: number }> {
-    const allPrice = await this.instancesService.getAllPricePerHour() ?? 0
-
-    return {
-      success: true,
-      body: allPrice
-    }
-  }
-
   @Get('/search')
   public async searchInstances (@Query('query') query: string, @Query('take') take: number, @Query('skip') skip: number): PResBody<{ instances: Instance[], pageCount: number }> {
-    const instances = await this.instancesService.searchInstances(query, take, skip)
-    const pageCount = await this.instancesService.searchInstancePages(query, take)
+    const instances = await this.managedInstancesService.searchInstances(query, take, skip)
+    const pageCount = await this.managedInstancesService.searchInstancePages(query, take)
 
     return {
       success: true,
@@ -79,7 +56,7 @@ export class InstancesController {
   @Get('/:uuid')
   @UseGuards(AuthGuard)
   public async getInstance (@Param('uuid') uuid: string): PResBody<Instance> {
-    const result = await this.instancesService.getInstance(uuid)
+    const result = await this.managedInstancesService.getInstance(uuid)
 
     return {
       success: true,
@@ -90,7 +67,7 @@ export class InstancesController {
   @Put('/:uuid')
   @UseGuards(AuthGuard)
   public async updateInstance (@Param('uuid') uuid: string, @Body() modifications: Instance): PResBody<Instance> {
-    const result = await this.instancesService.updateInstance(uuid, modifications)
+    const result = await this.managedInstancesService.updateInstance(uuid, modifications)
 
     return {
       success: true,
@@ -101,7 +78,7 @@ export class InstancesController {
   @Delete('/:uuid')
   @UseGuards(AuthGuard)
   public async deleteInstance (@Param('uuid') uuid: string): PResBody {
-    await this.instancesService.deleteInstance(uuid)
+    await this.managedInstancesService.deleteInstance(uuid)
 
     return {
       success: true
@@ -111,7 +88,7 @@ export class InstancesController {
   @Post('/:uuid/restart')
   @UseGuards(AuthGuard)
   public async restartInstance (@Param('uuid') uuid: string): PResBody {
-    await this.instancesService.restartInstance(uuid)
+    await this.managedInstancesService.restartInstance(uuid)
 
     return {
       success: true
@@ -121,7 +98,7 @@ export class InstancesController {
   @Post('/:uuid/reset')
   @UseGuards(AuthGuard)
   public async resetInstance (@Param('uuid') uuid: string): PResBody {
-    await this.instancesService.resetInstance(uuid)
+    await this.managedInstancesService.resetInstance(uuid)
 
     return {
       success: true
@@ -131,7 +108,7 @@ export class InstancesController {
   @Get('/:uuid/keypair')
   @UseGuards(AuthGuard)
   public async getInstanceKeypair (@Param('uuid') uuid: string): PResBody<string> {
-    const keypair = await this.instancesService.getInstanceKeypair(uuid)
+    const keypair = await this.managedInstancesService.getInstanceKeypair(uuid)
 
     return {
       success: true,

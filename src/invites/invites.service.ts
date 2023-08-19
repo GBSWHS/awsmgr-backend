@@ -4,7 +4,7 @@ import { Invite } from './entity/invite.entity'
 import { InjectRepository } from '@nestjs/typeorm'
 import { randomUUID } from 'crypto'
 import { Instance } from '../instances/entity/instance.entity'
-import { InstancesService } from '../instances/instances.service'
+import { ManagedInstancesService } from '../instances/managedinstances.service'
 
 @Injectable()
 export class InvitesService {
@@ -14,7 +14,7 @@ export class InvitesService {
 
     @InjectRepository(Invite)
     private readonly inviteRepository: Repository<Invite>,
-    private readonly instancesService: InstancesService
+    private readonly instancesService: ManagedInstancesService
   ) {}
 
   public async createInvite (invite: Invite): Promise<Invite> {

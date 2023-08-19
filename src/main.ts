@@ -48,6 +48,7 @@ async function bootstrap (): Promise<void> {
     .setVersion('0.0')
     .addTag('auth', '관리자 인증 관련')
     .addTag('instances', '관리자 인스턴스 관리')
+    .addTag('prices', '관리자 인스턴스 요금 관련')
     .addTag('invites', '사용자 인스턴스 사용')
     .addCookieAuth('SESSION_TOKEN')
     .build()
