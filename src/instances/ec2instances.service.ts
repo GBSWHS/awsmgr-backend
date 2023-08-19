@@ -38,7 +38,8 @@ export class EC2InstancesService {
   public async getEC2InstanceStatus (ids: string[]): Promise<InstanceStatus[] | undefined>
   public async getEC2InstanceStatus (idOrIds: string[] | string): Promise<InstanceStatus | InstanceStatus[] | undefined> {
     const command = new DescribeInstanceStatusCommand({
-      InstanceIds: Array.isArray(idOrIds) ? idOrIds : [idOrIds]
+      InstanceIds: Array.isArray(idOrIds) ? idOrIds : [idOrIds],
+      IncludeAllInstances: true
     })
 
     const response = await this.ec2Client.send(command)
@@ -92,7 +93,8 @@ export class EC2InstancesService {
       SecurityGroupIds: [
         securityGroupId
       ],
-      KeyName: keypair.KeyName
+      KeyName: keypair.KeyName,
+      UserData: btoa('#/bin/bash\ngrowpart /dev/sda 1\nresize2fs /dev/sda1')
     })
 
     const result = await this.ec2Client.send(command)

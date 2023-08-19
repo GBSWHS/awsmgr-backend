@@ -19,13 +19,16 @@ import { UtilsModule } from '../utils/utils.module'
     SecurityGroupsModule,
     KeypairsModule,
     NetworksModule,
-    UtilsModule
+    forwardRef(() => UtilsModule)
   ],
   controllers: [InstancesController],
   providers: [
     ManagedInstancesService,
     EC2InstancesService
   ],
-  exports: [ManagedInstancesService]
+  exports: [
+    ManagedInstancesService,
+    EC2InstancesService
+  ]
 })
 export class InstancesModule {}

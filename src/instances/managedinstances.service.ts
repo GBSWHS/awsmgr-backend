@@ -268,6 +268,12 @@ export class ManagedInstancesService {
       throw new NotFoundException(`Cannot found instance id: "${id}"`)
     }
 
+    const ec2Instance = await this.ec2InstancesService.getEC2InstanceStatus(id)
+    if (ec2Instance?.InstanceState?.Name === 'stopped') {
+      await this.ec2InstancesService.startEC2Instance(id)
+      return
+    }
+
     await this.ec2InstancesService.restartEC2Instance(id)
   }
 
