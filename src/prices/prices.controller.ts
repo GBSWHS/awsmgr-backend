@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '../auth/auth.guard'
 import { PResBody } from '../types'
 import { ManagedInstancesService } from '../instances/managedinstances.service'
@@ -14,18 +14,6 @@ export class PricesController {
   ) {}
 
   @Get('/')
-  public async getPriceByInstanceType (@Query('instanceType') instanceType: string): PResBody<{ pricePerHour: number }> {
-    const pricePerHour = await this.pricesService.getTypePricePerHour(instanceType) ?? 0.0117
-
-    return {
-      success: true,
-      body: {
-        pricePerHour
-      }
-    }
-  }
-
-  @Get('/all')
   @ApiCookieAuth()
   @UseGuards(AuthGuard)
   public async getAllPrice (): PResBody<{ pricePerHour: number, storageSize: number }> {
@@ -34,6 +22,18 @@ export class PricesController {
     return {
       success: true,
       body: allPrice
+    }
+  }
+
+  @Get('/:instanceType')
+  public async getPriceByInstanceType (@Param('instanceType') instanceType: string): PResBody<{ pricePerHour: number }> {
+    const pricePerHour = await this.pricesService.getTypePricePerHour(instanceType) ?? 0.0117
+
+    return {
+      success: true,
+      body: {
+        pricePerHour
+      }
     }
   }
 }
