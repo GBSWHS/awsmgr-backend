@@ -28,6 +28,6 @@ export class PricesService {
     const onDemandPrice = Object.values(priceObject.terms.OnDemand)[0] as any
     const priceDimension = Object.values(onDemandPrice.priceDimensions)[0] as any
 
-    return Math.floor(parseFloat(priceDimension.pricePerUnit.USD) * 100) / 100
+    return parseFloat(priceDimension.pricePerUnit.USD)
   }
 }
