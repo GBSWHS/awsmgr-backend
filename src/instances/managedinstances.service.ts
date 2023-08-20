@@ -206,7 +206,7 @@ export class ManagedInstancesService {
         const ec2Instance = await this.ec2InstancesService.getEC2Instance(instance.id)
         const volumeId = ec2Instance?.BlockDeviceMappings?.[0].Ebs?.VolumeId
 
-        await this.storagesService.updateRootStorage(volumeId ?? '', modifications.storageSize)
+        void this.storagesService.updateRootStorage(volumeId ?? '', modifications.storageSize)
       }
 
       if (modifications.type !== instance.type) {
