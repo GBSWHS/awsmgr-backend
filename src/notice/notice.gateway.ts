@@ -7,7 +7,7 @@ interface NoticeMessage {
   error?: Error
 }
 
-@WebSocketGateway(undefined, { transports: ['websocket'] })
+@WebSocketGateway(undefined, { transports: ['websocket', 'polling'] })
 export class NoticeGateway {
   @WebSocketServer()
   public readonly socket: Server
