@@ -10,7 +10,6 @@ import {
   StopInstancesCommand,
   StartInstancesCommand,
   TerminateInstancesCommand,
-  RebootInstancesCommand,
   DescribeInstanceStatusCommand,
   type InstanceStatus
 } from '@aws-sdk/client-ec2'
@@ -117,9 +116,10 @@ export class EC2InstancesService {
     await this.ec2Client.send(command)
   }
 
-  public async restartEC2Instance (id: string): Promise<void> {
-    const command = new RebootInstancesCommand({
-      InstanceIds: [id]
+  public async forceStopEC2Instance (id: string): Promise<void> {
+    const command = new StopInstancesCommand({
+      InstanceIds: [id],
+      Force: true
     })
 
     await this.ec2Client.send(command)

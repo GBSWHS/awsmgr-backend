@@ -63,10 +63,10 @@ export class ManagedInstancesService {
     return Math.ceil(searchResultCount / take)
   }
 
-  public async searchInstances (query: string, take: number, skip: number): Promise<Instance[]> {
+  public async searchInstances (query: string, take: number, skip: number): Promise<Instance[] & { state?: string }> {
     const likeSearch = Like(`%${query}%`)
 
-    return await this.instanceRepository.find({
+    const instances = await this.instanceRepository.find({
       take,
       skip,
       where: [
@@ -79,6 +79,13 @@ export class ManagedInstancesService {
         { id: likeSearch }
       ]
     })
+
+    const statuses = await this.ec2InstancesService.getEC2InstanceStatus(instances.map((v) => v.id))
+
+    return instances.map((v) => ({
+      ...v,
+      state: statuses?.find((i) => i.InstanceId === v.id)?.InstanceState?.Code
+    }))
   }
 
   public async listInstances (take: number, skip: number): Promise<Array<Instance & { state?: number }>> {
@@ -276,7 +283,9 @@ export class ManagedInstancesService {
       return
     }
 
-    await this.ec2InstancesService.restartEC2Instance(id)
+    await this.ec2InstancesService.forceStopEC2Instance(id)
+    await this.utilsService.waitForState(id, 'stopped')
+    await this.ec2InstancesService.startEC2Instance(id)
   }
 
   public async resetInstance (id: string): Promise<void> {
