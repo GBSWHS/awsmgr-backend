@@ -67,7 +67,7 @@ export class Instance {
   public readonly publicIP: string
 
   @IsNumber()
-  @Column()
+  @Column({ type: 'real' })
   @ApiProperty()
   @IsOptional()
   public readonly pricePerHour: number

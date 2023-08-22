@@ -80,6 +80,10 @@ export class ManagedInstancesService {
       ]
     })
 
+    if (instances.length < 1) {
+      return []
+    }
+
     const statuses = await this.ec2InstancesService.getEC2InstanceStatus(instances.map((v) => v.id))
 
     return instances.map((v) => ({
@@ -319,6 +323,7 @@ export class ManagedInstancesService {
         storageSize: true
       }
     })
+    console.log(instances)
 
     return {
       pricePerHour: instances.reduce((prev, curr) => prev + curr.pricePerHour, 0),
