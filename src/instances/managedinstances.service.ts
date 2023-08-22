@@ -323,7 +323,6 @@ export class ManagedInstancesService {
         storageSize: true
       }
     })
-    console.log(instances)
 
     return {
       pricePerHour: instances.reduce((prev, curr) => prev + curr.pricePerHour, 0),
